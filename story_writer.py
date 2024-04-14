@@ -1,7 +1,6 @@
 import time
 import os
 import json
-import openai
 import streamlit as st
 
 from ai_story_writer import ai_story_generator
