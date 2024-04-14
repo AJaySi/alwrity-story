@@ -1,4 +1,3 @@
 streamlit
-streamlit-lottie
-openai
+google-generativeai
 requests
