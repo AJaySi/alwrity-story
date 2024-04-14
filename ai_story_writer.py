@@ -6,10 +6,8 @@
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 from google.api_core import retry
 import google.generativeai as genai
-from pprint import pprint
 
 
 def generate_with_retry(model, prompt):
@@ -155,7 +153,6 @@ def ai_story_generator(persona, story_genre, characters):
         try:
             starting_draft = generate_with_retry(model, 
                     starting_prompt.format(premise=premise, outline=outline)).text
-            pprint(starting_draft)
         except Exception as err:
             print(f"Failed to Generate Story draft: {err}")
             return
@@ -164,7 +161,6 @@ def ai_story_generator(persona, story_genre, characters):
             draft = starting_draft
             continuation = generate_with_retry(model, 
                     continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
-            pprint(continuation)
         except Exception as err:
             print(f"Failed to write the initial draft: {err}")
 
