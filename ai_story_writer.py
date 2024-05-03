@@ -128,9 +128,7 @@ def ai_story_generator(persona, story_genre, characters):
 
         {guidelines}
         '''
-
-        # Configure generative AI
-        load_dotenv(Path('../.env'))
+        
         genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
         # Initialize the generative model
         model = genai.GenerativeModel('gemini-1.0-pro')
