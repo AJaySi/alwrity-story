@@ -103,17 +103,17 @@ def input_section():
                     value=persona_descriptions[selected_persona_name]
                 )
 
-        if st.button('AI, Write A Story..'):
-            if character_input.strip():
-                with st.spinner("Generating Story...💥💥"):
-                    story_content = ai_story_generator(selected_persona_name, selected_persona_name, character_input)
-                    if story_content:
-                        st.subheader('**👩🧕 Your Awesome Story:**')
-                        st.markdown(story_content)
-                    else:
-                        st.error("💥 **Failed to generate Story. Please try again!**")
-            else:
-                st.error(" Write a long on the story you have in your mind.. !")
+    if st.button('AI, Write A Story..'):
+        if character_input.strip():
+            with st.spinner("Generating Story...💥💥"):
+                story_content = ai_story_generator(selected_persona_name, selected_persona_name, character_input)
+                if story_content:
+                    st.subheader('**👩🧕 Your Awesome Story:**')
+                    st.markdown(story_content)
+                else:
+                    st.error("💥 **Failed to generate Story. Please try again!**")
+        else:
+            st.error("Describe the story you have in your mind.. !")
 
 
 if __name__ == "__main__":

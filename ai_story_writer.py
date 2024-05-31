@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from google.api_core import retry
 import google.generativeai as genai
+import streamlit as st
 
 
 def generate_with_retry(model, prompt):
@@ -27,6 +28,7 @@ def generate_with_retry(model, prompt):
     except Exception as e:
         print(f"Error generating content: {e}")
         return ""
+
 
 def ai_story_generator(persona, story_genre, characters):
     """
@@ -131,20 +133,22 @@ def ai_story_generator(persona, story_genre, characters):
         
         genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
         # Initialize the generative model
-        model = genai.GenerativeModel('gemini-1.0-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         # Generate prompts
         try:
             premise = generate_with_retry(model, premise_prompt).text
-            print(f"The premise of the story is: {premise}")
+            st.info(f"The premise of the story is: {premise}")
         except Exception as err:
-            print(f"Premise Generation Error: {err}")
+            st.error(f"Premise Generation Error: {err}")
             return
 
         outline = generate_with_retry(model, outline_prompt.format(premise=premise)).text
-        print(f"The Outline of the story is: {outline}\n\n")
+        with st.expander("Click to Checkout the outline, writing still in progress.."):
+            st.markdown(f"The Outline of the story is: {outline}\n\n")
+        
         if not outline:
-            print("Failed to generate outline. Exiting...")
+            st.error("Failed to generate outline. Exiting...")
             return
 
         # Generate starting draft
@@ -152,7 +156,7 @@ def ai_story_generator(persona, story_genre, characters):
             starting_draft = generate_with_retry(model, 
                     starting_prompt.format(premise=premise, outline=outline)).text
         except Exception as err:
-            print(f"Failed to Generate Story draft: {err}")
+            st.error(f"Failed to Generate Story draft: {err}")
             return
 
         try:
@@ -160,25 +164,28 @@ def ai_story_generator(persona, story_genre, characters):
             continuation = generate_with_retry(model, 
                     continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
         except Exception as err:
-            print(f"Failed to write the initial draft: {err}")
+            st.error(f"Failed to write the initial draft: {err}")
 
         # Add the continuation to the initial draft, keep building the story until we see 'IAMDONE'
         try:
             draft += '\n\n' + continuation
         except Exception as err:
-            print(f"Failed as: {err} and {continuation}")
-        while 'IAMDONE' not in continuation:
-            try:
-                continuation = generate_with_retry(model, 
+            st.error(f"Failed as: {err} and {continuation}")
+        
+        with st.status("Downloading data...", expanded=True) as status:
+            while 'IAMDONE' not in continuation:
+                try:
+                    status.update(label=f"Writing in progress... Current draft length: {len(draft)} characters")
+                    continuation = generate_with_retry(model, 
                         continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
-                draft += '\n\n' + continuation
-            except Exception as err:
-                print(f"Failed to continually write the story: {err}")
-                return
+                    draft += '\n\n' + continuation
+                except Exception as err:
+                    st.error(f"Failed to continually write the story: {err}")
+                    return
 
         # Remove 'IAMDONE' and print the final story
         final = draft.replace('IAMDONE', '').strip()
         return(final)
 
     except Exception as e:
-        print(f"Main Story writing: An error occurred: {e}")
+        st.error(f"Main Story writing: An error occurred: {e}")
