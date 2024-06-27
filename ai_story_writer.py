@@ -30,7 +30,9 @@ def generate_with_retry(model, prompt):
         return ""
 
 
-def ai_story_generator(persona, story_genre, characters):
+def ai_story_generator(persona, story_setting, character_input, 
+                       plot_elements, writing_style, story_tone, narrative_pov,
+                       audience_age_group, content_rating, ending_preference):
     """
     Write a story using prompt chaining and iterative generation.
 
@@ -39,15 +41,53 @@ def ai_story_generator(persona, story_genre, characters):
         story_genre (str): The genre of the story.
         characters (str): The characters in the story.
     """
-    print(f"Starting to write {story_genre} story based on characters: {characters}..")
+    st.info(f"""
+        You have chosen to create a story set in **{story_setting}**. 
+        The main characters are: **{character_input}**.
+        The plot will revolve around the theme of **{plot_elements}**.
+        The story will be written in a **{writing_style}** style with a **{story_tone}** tone, from a **{narrative_pov}** perspective. 
+        It is intended for a **{audience_age_group}** audience with a **{content_rating}** rating. 
+        You prefer the story to have a **{ending_preference}** ending.
+        """)
     try:
+        persona = f"""{persona}
+            Write a story with the following details:
+
+		**The stroy Setting is:**
+		{story_setting}
+		
+		**The Characters of the story are:**
+		{character_input}
+		
+		**Plot Elements of the story:**
+		{plot_elements}
+		
+		**Story Writing Style:**
+		{writing_style}
+		
+		**The story Tone is:**
+		{story_tone}
+		
+		**Write story from the Point of View of:**
+		{narrative_pov}
+		
+		**Target Audience of the story:**
+		{audience_age_group}, **Content Rating:** {content_rating}
+		
+		**Story Ending:**
+		{ending_preference}
+		
+		Make sure the story is engaging and tailored to the specified audience and content rating. 
+        Ensure the ending aligns with the preference indicated.
+
+        """
         # Define persona and writing guidelines
         guidelines = f'''\
-        Writing Guidelines
+        Writing Guidelines:
 
         Delve deeper. Lose yourself in the world you're building. Unleash vivid
         descriptions to paint the scenes in your reader's mind.
-        Develop your characters—let their motivations, fears, and complexities unfold naturally.
+        Develop your characters — let their motivations, fears, and complexities unfold naturally.
         Weave in the threads of your outline, but don't feel constrained by it.
         Allow your story to surprise you as you write. Use rich imagery, sensory details, and
         evocative language to bring the setting, characters, and events to life.
@@ -65,7 +105,7 @@ def ai_story_generator(persona, story_genre, characters):
         premise_prompt = f'''\
         {persona}
 
-        Write a single sentence premise for a {story_genre} story featuring {characters}.
+        Write a single sentence premise for a {story_setting} story featuring {character_input}.
         '''
 
         outline_prompt = f'''\
@@ -95,7 +135,7 @@ def ai_story_generator(persona, story_genre, characters):
         Start to write the very beginning of the story. You are not expected to finish
         the whole story now. Your writing should be detailed enough that you are only
         scratching the surface of the first bullet of your outline. Try to write AT
-        MINIMUM 5000 WORDS.
+        MINIMUM 2000 WORDS.
 
         {guidelines}
         '''
@@ -124,7 +164,7 @@ def ai_story_generator(persona, story_genre, characters):
         Your task is to continue where you left off and write the next part of the story.
         You are not expected to finish the whole story now. Your writing should be
         detailed enough that you are only scratching the surface of the next part of
-        your outline. Try to write AT MINIMUM 2000 WORDS. However, only once the story
+        your outline. Try to write AT MINIMUM 1000 WORDS. However, only once the story
         is COMPLETELY finished, write IAMDONE. Remember, do NOT write a whole chapter
         right now.
 
@@ -172,7 +212,7 @@ def ai_story_generator(persona, story_genre, characters):
         except Exception as err:
             st.error(f"Failed as: {err} and {continuation}")
         
-        with st.status("Downloading data...", expanded=True) as status:
+        with st.status("Story Writing in Progress..", expanded=True) as status:
             while 'IAMDONE' not in continuation:
                 try:
                     status.update(label=f"Writing in progress... Current draft length: {len(draft)} characters")
