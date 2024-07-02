@@ -173,7 +173,7 @@ def ai_story_generator(persona, story_setting, character_input,
         
         genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
         # Initialize the generative model
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-pro')
 
         # Generate prompts
         try:
@@ -184,7 +184,7 @@ def ai_story_generator(persona, story_setting, character_input,
             return
 
         outline = generate_with_retry(model, outline_prompt.format(premise=premise)).text
-        with st.expander("Click to Checkout the outline, writing still in progress.."):
+        with st.expander("🧙‍♂️ Click to Checkout the outline, writing still in progress..", expanded=True):
             st.markdown(f"The Outline of the story is: {outline}\n\n")
         
         if not outline:
@@ -192,36 +192,40 @@ def ai_story_generator(persona, story_setting, character_input,
             return
 
         # Generate starting draft
-        try:
-            starting_draft = generate_with_retry(model, 
+        with st.status("🦸Story Writing in Progress..", expanded=True) as status:
+            try:
+                starting_draft = generate_with_retry(model, 
                     starting_prompt.format(premise=premise, outline=outline)).text
-        except Exception as err:
-            st.error(f"Failed to Generate Story draft: {err}")
-            return
+                status.update(label=f"🪂 Current draft length: {len(starting_draft)} characters")
+            except Exception as err:
+                st.error(f"Failed to Generate Story draft: {err}")
+                return False
 
-        try:
-            draft = starting_draft
-            continuation = generate_with_retry(model, 
+            try:
+                draft = starting_draft
+                continuation = generate_with_retry(model, 
                     continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
-        except Exception as err:
-            st.error(f"Failed to write the initial draft: {err}")
+                status.update(label=f"🏄 Current draft length: {len(continuation)} characters")
+            except Exception as err:
+                st.error(f"Failed to write the initial draft: {err}")
 
-        # Add the continuation to the initial draft, keep building the story until we see 'IAMDONE'
-        try:
-            draft += '\n\n' + continuation
-        except Exception as err:
-            st.error(f"Failed as: {err} and {continuation}")
+            # Add the continuation to the initial draft, keep building the story until we see 'IAMDONE'
+            try:
+                draft += '\n\n' + continuation
+                status.update(label=f"Current draft length: {len(draft)} characters")
+            except Exception as err:
+                st.error(f"Failed as: {err} and {continuation}")
         
-        with st.status("Story Writing in Progress..", expanded=True) as status:
             while 'IAMDONE' not in continuation:
                 try:
-                    status.update(label=f"Writing in progress... Current draft length: {len(draft)} characters")
+                    status.update(label=f"⏳ Writing in progress... Current draft length: {len(draft)} characters")
                     continuation = generate_with_retry(model, 
                         continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
                     draft += '\n\n' + continuation
                 except Exception as err:
                     st.error(f"Failed to continually write the story: {err}")
                     return
+            status.update(label=f"✔️  Story Completed ✔️ ... Scroll Down for the story.")
 
         # Remove 'IAMDONE' and print the final story
         final = draft.replace('IAMDONE', '').strip()

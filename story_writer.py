@@ -21,6 +21,24 @@ def set_page_config():
 def custom_css():
     st.markdown("""
     <style>
+        ::-webkit-scrollbar-track {
+        background: #e1ebf9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #90CAF9;
+            border-radius: 10px;
+            border: 3px solid #e1ebf9;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64B5F6;
+        }
+
+        ::-webkit-scrollbar {
+            width: 16px;
+        }
+
         div.stButton > button:first-child {
 	        background: #1565C0;
 	        color: white;
