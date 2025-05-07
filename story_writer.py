@@ -10,7 +10,12 @@ def main():
     set_page_config()
     custom_css()
     hide_elements()
+    title_and_description()
+    how_to_use_section()
+    advanced_settings()
     input_section()
+    help_faq_section()
+    st.markdown('<div class="footer">Made with ❤️ by ALwrity | <a href="https://github.com/AJaySi/AI-Writer" style="color:#1976D2;">Support</a></div>', unsafe_allow_html=True)
 
 def set_page_config():
     st.set_page_config(
@@ -20,41 +25,38 @@ def set_page_config():
 
 def custom_css():
     st.markdown("""
-    <style>
-        ::-webkit-scrollbar-track {
-        background: #e1ebf9;
+        <style>
+        html, body, [class*="css"]  {
+            font-size: 16px;
         }
-
-        ::-webkit-scrollbar-thumb {
-            background-color: #90CAF9;
-            border-radius: 10px;
-            border: 3px solid #e1ebf9;
+        @media (max-width: 600px) {
+            html, body, [class*="css"]  {
+                font-size: 14px !important;
+            }
+            .stButton > button, .stTextInput > div > input {
+                font-size: 15px !important;
+            }
         }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64B5F6;
-        }
-
-        ::-webkit-scrollbar {
-            width: 16px;
-        }
-
+        .streamlit-expanderHeader {color: #fff !important; background: #111 !important; border-radius: 8px;}
+        .streamlit-expanderContent {background: #111 !important;}
         div.stButton > button:first-child {
-	        background: #1565C0;
-	        color: white;
-	        border: none;
-	        padding: 12px 24px;
-	        border-radius: 8px;
-	        text-align: center;
-	        text-decoration: none;
-	        display: inline-block;
-	        font-size: 16px;
-	        margin: 10px 2px;
-	        cursor: pointer;
-	        transition: background-color 0.3s ease;
-	        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-	        font-weight: bold;
+            background: #1565C0 !important;
+            color: white !important;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
         }
+        .stAlert, .stError, .stWarning { color: #fff !important; background: #b71c1c !important; }
+        .footer {text-align:center; margin-top:2rem; color:#1976D2; font-size:15px;}
         </style>
     """, unsafe_allow_html=True)
 
@@ -65,20 +67,39 @@ def hide_elements():
     hide_streamlit_footer = '<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;}</style>'
     st.markdown(hide_streamlit_footer, unsafe_allow_html=True)
 
+def title_and_description():
+    st.title("🧕 Alwrity - AI Story Writer")
+    st.markdown("This app helps you create creative stories with AI. Just fill in your ideas and let Alwrity do the magic! 🧠✨")
 
+def how_to_use_section():
+    with st.expander('How to Use', expanded=False):
+        st.markdown('''<div style="background:#111;padding:1rem;border-radius:10px;margin-bottom:1.5rem;">
+        <ol style="color:#fff;margin-left:1.2em;">
+          <li>Select your story persona or genre.</li>
+          <li>Describe your story setting, characters, and plot details.</li>
+          <li>Choose tone, style, audience, and story length.</li>
+          <li>Click <b>AI, Write a Story..</b> to generate your story.</li>
+          <li>Read, enjoy, and copy your story!</li>
+        </ol>
+        </div>''', unsafe_allow_html=True)
+
+def advanced_settings():
+    with st.expander("Advanced Settings ⚙️", expanded=False):
+        st.markdown('''If you have your own Gemini AI Key, you can enter it below. <a href="https://aistudio.google.com/app/apikey" target="_blank">Get Gemini API Key</a>''', unsafe_allow_html=True)
+        user_api_key = st.text_input("Gemini AI Key (optional)", type="password", help="Paste your Gemini API Key here if you have one. Otherwise, the tool will use the default key if available.")
+        if user_api_key:
+            st.session_state["user_api_key"] = user_api_key
+
+def help_faq_section():
+    with st.expander('❓ Need Help?', expanded=False):
+        st.markdown('''
+        - <b>What does this tool do?</b> It helps you write creative stories with AI, based on your ideas and preferences.<br>
+        - <b>Do I need an AI Key?</b> No, you can use the tool without one. Only add your key if you have issues or want to use your own quota.<br>
+        - <b>Why do I see errors?</b> Make sure you filled all required fields. If you see API errors, try adding your own Gemini AI Key.<br>
+        - <b>Still stuck?</b> <a href="https://github.com/AJaySi/AI-Writer" target="_blank">See our support & documentation</a>
+        ''', unsafe_allow_html=True)
 
 def input_section():
-    # --- API Key Input Section ---
-    st.sidebar.header("🔑 API Key Settings")
-    user_api_key = st.sidebar.text_input(
-        "Enter your Gemini API Key (optional):",
-        type="password",
-        help="Provide your own Gemini API key if the default is not working or has exceeded its limit."
-    )
-    if user_api_key:
-        st.session_state["user_api_key"] = user_api_key
-
-    st.title("🧕 Alwrity - AI Story Writer")
     personas = [
         ("Award-Winning Science Fiction Author", "👽 Award-Winning Science Fiction Author"),
         ("Historical Fiction Author", "🏺 Historical Fiction Author"),
@@ -189,6 +210,13 @@ def input_section():
             help="Choose the type of ending you prefer for the story."
         )
 
+    # Page Length Option
+    st.subheader("📄 Story Length")
+    page_length = st.slider(
+        "Select the number of pages for your story:",
+        min_value=1, max_value=10, value=3, help="1 page ≈ 300 words."
+    )
+
     if st.button('AI, Write a Story..'):
         if character_input.strip():
             with st.spinner("Generating Story...💥💥"):
@@ -196,7 +224,7 @@ def input_section():
                 story_content = ai_story_generator(persona_descriptions[selected_persona_name],
                         story_setting, character_input, plot_elements, writing_style,
                         story_tone, narrative_pov, audience_age_group, content_rating,
-                        ending_preference, api_key=api_key)
+                        ending_preference, api_key=api_key, page_length=page_length)
                 if story_content:
                     st.subheader('**🧕 Your Awesome Story:**')
                     st.markdown(story_content)

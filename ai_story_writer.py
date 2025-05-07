@@ -32,7 +32,7 @@ def generate_with_retry(model, prompt):
 
 def ai_story_generator(persona, story_setting, character_input, 
                        plot_elements, writing_style, story_tone, narrative_pov,
-                       audience_age_group, content_rating, ending_preference, api_key=None):
+                       audience_age_group, content_rating, ending_preference, api_key=None, page_length=3):
     """
     Write a story using prompt chaining and iterative generation.
 
@@ -40,6 +40,7 @@ def ai_story_generator(persona, story_setting, character_input,
         persona (str): The persona statement for the author.
         story_genre (str): The genre of the story.
         characters (str): The characters in the story.
+        page_length (int): The target length of the story in pages.
     """
     st.info(f"""
         You have chosen to create a story set in **{story_setting}**. 
@@ -82,10 +83,11 @@ def ai_story_generator(persona, story_setting, character_input,
 
         """
         # Define persona and writing guidelines
-        guidelines = f'''\
-
+        # Calculate target word count (1 page ≈ 300 words)
+        target_words = page_length * 300
+        # Update guidelines to reflect target length
+        guidelines = f'''
         Writing Guidelines:
-
         Delve deeper. Lose yourself in the world you're building. Unleash vivid
         descriptions to paint the scenes in your reader's mind.
         Develop your characters — let their motivations, fears, and complexities unfold naturally.
@@ -97,10 +99,9 @@ def ai_story_generator(persona, story_setting, character_input,
         Keep things intriguing but not fully resolved.
         Avoid boxing the story into a corner too early.
         Plant the seeds of subplots or potential character arc shifts that can be expanded later.
-
         Remember, your main goal is to write as much as you can. If you get through
         the story too fast, that is bad. Expand, never summarize.
-        '''
+        Aim for a story of at least {target_words} words (about {page_length} pages).'''
 
         # Generate prompts
         premise_prompt = f'''\
@@ -223,13 +224,16 @@ def ai_story_generator(persona, story_setting, character_input,
                 st.error(f"Failed to write the initial draft: {err}")
 
             # Add the continuation to the initial draft, keep building the story until we see 'IAMDONE'
+            import re
+            def word_count(text):
+                return len(re.findall(r'\w+', text))
             try:
                 draft += '\n\n' + continuation
                 status.update(label=f"Current draft length: {len(draft)} characters")
             except Exception as err:
                 st.error(f"Failed as: {err} and {continuation}")
         
-            while 'IAMDONE' not in continuation:
+            while 'IAMDONE' not in continuation and word_count(draft) < target_words:
                 try:
                     status.update(label=f"⏳ Writing in progress... Current draft length: {len(draft)} characters")
                     continuation_result = generate_with_retry(model, 
