@@ -85,6 +85,8 @@ def ai_story_generator(persona, story_setting, character_input,
         # Define persona and writing guidelines
         # Calculate target word count (1 page ≈ 300 words)
         target_words = page_length * 300
+        # Initial draft always targets at least 2000 words for a rich start
+        initial_words = 2000
         # Update guidelines to reflect target length
         guidelines = f'''
         Writing Guidelines:
@@ -122,7 +124,7 @@ def ai_story_generator(persona, story_setting, character_input,
         Write an outline for the plot of your story.
         '''
 
-        starting_prompt = f'''\
+        starting_prompt = f'''
 
         {persona}
 
@@ -139,8 +141,7 @@ def ai_story_generator(persona, story_setting, character_input,
 
         Start to write the very beginning of the story. You are not expected to finish
         the whole story now. Your writing should be detailed enough that you are only
-        scratching the surface of the first bullet of your outline. Try to write AT
-        MINIMUM 2000 WORDS.
+        scratching the surface of the first bullet of your outline. Try to write AT MINIMUM {initial_words} WORDS.
 
         {guidelines}
         '''
@@ -232,12 +233,19 @@ def ai_story_generator(persona, story_setting, character_input,
                 status.update(label=f"Current draft length: {len(draft)} characters")
             except Exception as err:
                 st.error(f"Failed as: {err} and {continuation}")
-        
+            
+            # Strict chunked generation: one page at a time
             while 'IAMDONE' not in continuation and word_count(draft) < target_words:
+                # Calculate remaining words needed
+                remaining_words = target_words - word_count(draft)
+                # If less than 300 words left, instruct LLM to write only the remaining words
+                chunk_words = min(300, remaining_words)
+                # Modify the continuation prompt to request exactly chunk_words
+                chunked_prompt = continuation_prompt + f"\nWrite no more than {chunk_words} words in this section. Stop if you reach the target length."
                 try:
                     status.update(label=f"⏳ Writing in progress... Current draft length: {len(draft)} characters")
                     continuation_result = generate_with_retry(model, 
-                        continuation_prompt.format(premise=premise, outline=outline, story_text=draft))
+                        chunked_prompt.format(premise=premise, outline=outline, story_text=draft))
                     continuation = continuation_result.text if hasattr(continuation_result, 'text') else str(continuation_result)
                     draft += '\n\n' + continuation
                 except Exception as err:
@@ -247,6 +255,10 @@ def ai_story_generator(persona, story_setting, character_input,
 
         # Remove 'IAMDONE' and print the final story
         final = draft.replace('IAMDONE', '').strip()
+        # Trim to exact word count
+        words = final.split()
+        if len(words) > target_words:
+            final = ' '.join(words[:target_words])
         return(final)
 
     except Exception as e:

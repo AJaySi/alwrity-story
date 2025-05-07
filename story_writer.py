@@ -214,8 +214,10 @@ def input_section():
     st.subheader("📄 Story Length")
     page_length = st.slider(
         "Select the number of pages for your story:",
-        min_value=1, max_value=10, value=3, help="1 page ≈ 300 words."
+        min_value=1, max_value=100, value=3, help="1 page ≈ 300 words. For very large stories, consider using your own API key."
     )
+    if page_length > 20:
+        st.warning("You have selected a very large story. This may use a lot of API quota and take a long time. For best results, use your own Gemini API key in Advanced Settings.")
 
     if st.button('AI, Write a Story..'):
         if character_input.strip():
