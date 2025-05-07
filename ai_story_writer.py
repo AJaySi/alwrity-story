@@ -32,7 +32,7 @@ def generate_with_retry(model, prompt):
 
 def ai_story_generator(persona, story_setting, character_input, 
                        plot_elements, writing_style, story_tone, narrative_pov,
-                       audience_age_group, content_rating, ending_preference):
+                       audience_age_group, content_rating, ending_preference, api_key=None, page_length=3):
     """
     Write a story using prompt chaining and iterative generation.
 
@@ -40,6 +40,7 @@ def ai_story_generator(persona, story_setting, character_input,
         persona (str): The persona statement for the author.
         story_genre (str): The genre of the story.
         characters (str): The characters in the story.
+        page_length (int): The target length of the story in pages.
     """
     st.info(f"""
         You have chosen to create a story set in **{story_setting}**. 
@@ -82,9 +83,13 @@ def ai_story_generator(persona, story_setting, character_input,
 
         """
         # Define persona and writing guidelines
-        guidelines = f'''\
+        # Calculate target word count (1 page ≈ 300 words)
+        target_words = page_length * 300
+        # Initial draft always targets at least 2000 words for a rich start
+        initial_words = 2000
+        # Update guidelines to reflect target length
+        guidelines = f'''
         Writing Guidelines:
-
         Delve deeper. Lose yourself in the world you're building. Unleash vivid
         descriptions to paint the scenes in your reader's mind.
         Develop your characters — let their motivations, fears, and complexities unfold naturally.
@@ -96,19 +101,20 @@ def ai_story_generator(persona, story_setting, character_input,
         Keep things intriguing but not fully resolved.
         Avoid boxing the story into a corner too early.
         Plant the seeds of subplots or potential character arc shifts that can be expanded later.
-
         Remember, your main goal is to write as much as you can. If you get through
         the story too fast, that is bad. Expand, never summarize.
-        '''
+        Aim for a story of at least {target_words} words (about {page_length} pages).'''
 
         # Generate prompts
         premise_prompt = f'''\
+
         {persona}
 
         Write a single sentence premise for a {story_setting} story featuring {character_input}.
         '''
 
         outline_prompt = f'''\
+
         {persona}
 
         You have a gripping premise in mind:
@@ -118,7 +124,8 @@ def ai_story_generator(persona, story_setting, character_input,
         Write an outline for the plot of your story.
         '''
 
-        starting_prompt = f'''\
+        starting_prompt = f'''
+
         {persona}
 
         You have a gripping premise in mind:
@@ -134,13 +141,13 @@ def ai_story_generator(persona, story_setting, character_input,
 
         Start to write the very beginning of the story. You are not expected to finish
         the whole story now. Your writing should be detailed enough that you are only
-        scratching the surface of the first bullet of your outline. Try to write AT
-        MINIMUM 2000 WORDS.
+        scratching the surface of the first bullet of your outline. Try to write AT MINIMUM {initial_words} WORDS.
 
         {guidelines}
         '''
 
         continuation_prompt = f'''\
+
         {persona}
 
         You have a gripping premise in mind:
@@ -171,19 +178,25 @@ def ai_story_generator(persona, story_setting, character_input,
         {guidelines}
         '''
         
-        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-        # Initialize the generative model
-        model = genai.GenerativeModel('gemini-pro')
+        # Use user-provided API key if available
+        if api_key:
+            genai.configure(api_key=api_key)
+        else:
+            genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+        # Initialize the generative model with Gemini 2.0 Flash
+        model = genai.GenerativeModel('gemini-2.0-flash')
 
         # Generate prompts
         try:
-            premise = generate_with_retry(model, premise_prompt).text
+            premise_result = generate_with_retry(model, premise_prompt)
+            premise = premise_result.text if hasattr(premise_result, 'text') else str(premise_result)
             st.info(f"The premise of the story is: {premise}")
         except Exception as err:
             st.error(f"Premise Generation Error: {err}")
             return
 
-        outline = generate_with_retry(model, outline_prompt.format(premise=premise)).text
+        outline_result = generate_with_retry(model, outline_prompt.format(premise=premise))
+        outline = outline_result.text if hasattr(outline_result, 'text') else str(outline_result)
         with st.expander("🧙‍♂️ Click to Checkout the outline, writing still in progress..", expanded=True):
             st.markdown(f"The Outline of the story is: {outline}\n\n")
         
@@ -194,8 +207,9 @@ def ai_story_generator(persona, story_setting, character_input,
         # Generate starting draft
         with st.status("🦸Story Writing in Progress..", expanded=True) as status:
             try:
-                starting_draft = generate_with_retry(model, 
-                    starting_prompt.format(premise=premise, outline=outline)).text
+                starting_draft_result = generate_with_retry(model, 
+                    starting_prompt.format(premise=premise, outline=outline))
+                starting_draft = starting_draft_result.text if hasattr(starting_draft_result, 'text') else str(starting_draft_result)
                 status.update(label=f"🪂 Current draft length: {len(starting_draft)} characters")
             except Exception as err:
                 st.error(f"Failed to Generate Story draft: {err}")
@@ -203,24 +217,36 @@ def ai_story_generator(persona, story_setting, character_input,
 
             try:
                 draft = starting_draft
-                continuation = generate_with_retry(model, 
-                    continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
+                continuation_result = generate_with_retry(model, 
+                    continuation_prompt.format(premise=premise, outline=outline, story_text=draft))
+                continuation = continuation_result.text if hasattr(continuation_result, 'text') else str(continuation_result)
                 status.update(label=f"🏄 Current draft length: {len(continuation)} characters")
             except Exception as err:
                 st.error(f"Failed to write the initial draft: {err}")
 
             # Add the continuation to the initial draft, keep building the story until we see 'IAMDONE'
+            import re
+            def word_count(text):
+                return len(re.findall(r'\w+', text))
             try:
                 draft += '\n\n' + continuation
                 status.update(label=f"Current draft length: {len(draft)} characters")
             except Exception as err:
                 st.error(f"Failed as: {err} and {continuation}")
-        
-            while 'IAMDONE' not in continuation:
+            
+            # Strict chunked generation: one page at a time
+            while 'IAMDONE' not in continuation and word_count(draft) < target_words:
+                # Calculate remaining words needed
+                remaining_words = target_words - word_count(draft)
+                # If less than 300 words left, instruct LLM to write only the remaining words
+                chunk_words = min(300, remaining_words)
+                # Modify the continuation prompt to request exactly chunk_words
+                chunked_prompt = continuation_prompt + f"\nWrite no more than {chunk_words} words in this section. Stop if you reach the target length."
                 try:
                     status.update(label=f"⏳ Writing in progress... Current draft length: {len(draft)} characters")
-                    continuation = generate_with_retry(model, 
-                        continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
+                    continuation_result = generate_with_retry(model, 
+                        chunked_prompt.format(premise=premise, outline=outline, story_text=draft))
+                    continuation = continuation_result.text if hasattr(continuation_result, 'text') else str(continuation_result)
                     draft += '\n\n' + continuation
                 except Exception as err:
                     st.error(f"Failed to continually write the story: {err}")
@@ -229,6 +255,10 @@ def ai_story_generator(persona, story_setting, character_input,
 
         # Remove 'IAMDONE' and print the final story
         final = draft.replace('IAMDONE', '').strip()
+        # Trim to exact word count
+        words = final.split()
+        if len(words) > target_words:
+            final = ' '.join(words[:target_words])
         return(final)
 
     except Exception as e:
