@@ -189,6 +189,13 @@ def input_section():
             help="Choose the type of ending you prefer for the story."
         )
 
+    # Page Length Option
+    st.subheader("📄 Story Length")
+    page_length = st.slider(
+        "Select the number of pages for your story:",
+        min_value=1, max_value=10, value=3, help="1 page ≈ 300 words."
+    )
+
     if st.button('AI, Write a Story..'):
         if character_input.strip():
             with st.spinner("Generating Story...💥💥"):
@@ -196,7 +203,7 @@ def input_section():
                 story_content = ai_story_generator(persona_descriptions[selected_persona_name],
                         story_setting, character_input, plot_elements, writing_style,
                         story_tone, narrative_pov, audience_age_group, content_rating,
-                        ending_preference, api_key=api_key)
+                        ending_preference, api_key=api_key, page_length=page_length)
                 if story_content:
                     st.subheader('**🧕 Your Awesome Story:**')
                     st.markdown(story_content)

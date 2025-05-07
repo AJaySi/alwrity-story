@@ -32,7 +32,7 @@ def generate_with_retry(model, prompt):
 
 def ai_story_generator(persona, story_setting, character_input, 
                        plot_elements, writing_style, story_tone, narrative_pov,
-                       audience_age_group, content_rating, ending_preference, api_key=None):
+                       audience_age_group, content_rating, ending_preference, api_key=None, page_length=3):
     """
     Write a story using prompt chaining and iterative generation.
 
@@ -40,6 +40,7 @@ def ai_story_generator(persona, story_setting, character_input,
         persona (str): The persona statement for the author.
         story_genre (str): The genre of the story.
         characters (str): The characters in the story.
+        page_length (int): The desired length of the story in pages (1 page ≈ 300 words).
     """
     st.info(f"""
         You have chosen to create a story set in **{story_setting}**. 
@@ -82,6 +83,9 @@ def ai_story_generator(persona, story_setting, character_input,
 
         """
         # Define persona and writing guidelines
+        # Calculate target word count (1 page ≈ 300 words)
+        target_words = page_length * 300
+
         guidelines = f'''\
 
         Writing Guidelines:
@@ -100,6 +104,7 @@ def ai_story_generator(persona, story_setting, character_input,
 
         Remember, your main goal is to write as much as you can. If you get through
         the story too fast, that is bad. Expand, never summarize.
+        Aim for a story of at least {target_words} words (about {page_length} pages).
         '''
 
         # Generate prompts
@@ -222,14 +227,18 @@ def ai_story_generator(persona, story_setting, character_input,
             except Exception as err:
                 st.error(f"Failed to write the initial draft: {err}")
 
-            # Add the continuation to the initial draft, keep building the story until we see 'IAMDONE'
+            # Add the continuation to the initial draft, keep building the story until we see 'IAMDONE' or reach target words
             try:
                 draft += '\n\n' + continuation
                 status.update(label=f"Current draft length: {len(draft)} characters")
             except Exception as err:
                 st.error(f"Failed as: {err} and {continuation}")
         
-            while 'IAMDONE' not in continuation:
+            import re
+            def word_count(text):
+                return len(re.findall(r'\w+', text))
+
+            while 'IAMDONE' not in continuation and word_count(draft) < target_words:
                 try:
                     status.update(label=f"⏳ Writing in progress... Current draft length: {len(draft)} characters")
                     continuation_result = generate_with_retry(model, 
