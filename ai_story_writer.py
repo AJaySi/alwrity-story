@@ -32,7 +32,7 @@ def generate_with_retry(model, prompt):
 
 def ai_story_generator(persona, story_setting, character_input, 
                        plot_elements, writing_style, story_tone, narrative_pov,
-                       audience_age_group, content_rating, ending_preference):
+                       audience_age_group, content_rating, ending_preference, api_key=None):
     """
     Write a story using prompt chaining and iterative generation.
 
@@ -83,6 +83,7 @@ def ai_story_generator(persona, story_setting, character_input,
         """
         # Define persona and writing guidelines
         guidelines = f'''\
+
         Writing Guidelines:
 
         Delve deeper. Lose yourself in the world you're building. Unleash vivid
@@ -103,12 +104,14 @@ def ai_story_generator(persona, story_setting, character_input,
 
         # Generate prompts
         premise_prompt = f'''\
+
         {persona}
 
         Write a single sentence premise for a {story_setting} story featuring {character_input}.
         '''
 
         outline_prompt = f'''\
+
         {persona}
 
         You have a gripping premise in mind:
@@ -119,6 +122,7 @@ def ai_story_generator(persona, story_setting, character_input,
         '''
 
         starting_prompt = f'''\
+
         {persona}
 
         You have a gripping premise in mind:
@@ -141,6 +145,7 @@ def ai_story_generator(persona, story_setting, character_input,
         '''
 
         continuation_prompt = f'''\
+
         {persona}
 
         You have a gripping premise in mind:
@@ -171,19 +176,25 @@ def ai_story_generator(persona, story_setting, character_input,
         {guidelines}
         '''
         
-        genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-        # Initialize the generative model
-        model = genai.GenerativeModel('gemini-pro')
+        # Use user-provided API key if available
+        if api_key:
+            genai.configure(api_key=api_key)
+        else:
+            genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+        # Initialize the generative model with Gemini 2.0 Flash
+        model = genai.GenerativeModel('gemini-2.0-flash')
 
         # Generate prompts
         try:
-            premise = generate_with_retry(model, premise_prompt).text
+            premise_result = generate_with_retry(model, premise_prompt)
+            premise = premise_result.text if hasattr(premise_result, 'text') else str(premise_result)
             st.info(f"The premise of the story is: {premise}")
         except Exception as err:
             st.error(f"Premise Generation Error: {err}")
             return
 
-        outline = generate_with_retry(model, outline_prompt.format(premise=premise)).text
+        outline_result = generate_with_retry(model, outline_prompt.format(premise=premise))
+        outline = outline_result.text if hasattr(outline_result, 'text') else str(outline_result)
         with st.expander("🧙‍♂️ Click to Checkout the outline, writing still in progress..", expanded=True):
             st.markdown(f"The Outline of the story is: {outline}\n\n")
         
@@ -194,8 +205,9 @@ def ai_story_generator(persona, story_setting, character_input,
         # Generate starting draft
         with st.status("🦸Story Writing in Progress..", expanded=True) as status:
             try:
-                starting_draft = generate_with_retry(model, 
-                    starting_prompt.format(premise=premise, outline=outline)).text
+                starting_draft_result = generate_with_retry(model, 
+                    starting_prompt.format(premise=premise, outline=outline))
+                starting_draft = starting_draft_result.text if hasattr(starting_draft_result, 'text') else str(starting_draft_result)
                 status.update(label=f"🪂 Current draft length: {len(starting_draft)} characters")
             except Exception as err:
                 st.error(f"Failed to Generate Story draft: {err}")
@@ -203,8 +215,9 @@ def ai_story_generator(persona, story_setting, character_input,
 
             try:
                 draft = starting_draft
-                continuation = generate_with_retry(model, 
-                    continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
+                continuation_result = generate_with_retry(model, 
+                    continuation_prompt.format(premise=premise, outline=outline, story_text=draft))
+                continuation = continuation_result.text if hasattr(continuation_result, 'text') else str(continuation_result)
                 status.update(label=f"🏄 Current draft length: {len(continuation)} characters")
             except Exception as err:
                 st.error(f"Failed to write the initial draft: {err}")
@@ -219,8 +232,9 @@ def ai_story_generator(persona, story_setting, character_input,
             while 'IAMDONE' not in continuation:
                 try:
                     status.update(label=f"⏳ Writing in progress... Current draft length: {len(draft)} characters")
-                    continuation = generate_with_retry(model, 
-                        continuation_prompt.format(premise=premise, outline=outline, story_text=draft)).text
+                    continuation_result = generate_with_retry(model, 
+                        continuation_prompt.format(premise=premise, outline=outline, story_text=draft))
+                    continuation = continuation_result.text if hasattr(continuation_result, 'text') else str(continuation_result)
                     draft += '\n\n' + continuation
                 except Exception as err:
                     st.error(f"Failed to continually write the story: {err}")

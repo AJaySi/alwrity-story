@@ -68,6 +68,16 @@ def hide_elements():
 
 
 def input_section():
+    # --- API Key Input Section ---
+    st.sidebar.header("🔑 API Key Settings")
+    user_api_key = st.sidebar.text_input(
+        "Enter your Gemini API Key (optional):",
+        type="password",
+        help="Provide your own Gemini API key if the default is not working or has exceeded its limit."
+    )
+    if user_api_key:
+        st.session_state["user_api_key"] = user_api_key
+
     st.title("🧕 Alwrity - AI Story Writer")
     personas = [
         ("Award-Winning Science Fiction Author", "👽 Award-Winning Science Fiction Author"),
@@ -182,10 +192,11 @@ def input_section():
     if st.button('AI, Write a Story..'):
         if character_input.strip():
             with st.spinner("Generating Story...💥💥"):
+                api_key = st.session_state.get("user_api_key", None)
                 story_content = ai_story_generator(persona_descriptions[selected_persona_name],
                         story_setting, character_input, plot_elements, writing_style,
                         story_tone, narrative_pov, audience_age_group, content_rating,
-                        ending_preference)
+                        ending_preference, api_key=api_key)
                 if story_content:
                     st.subheader('**🧕 Your Awesome Story:**')
                     st.markdown(story_content)
