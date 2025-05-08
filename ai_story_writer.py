@@ -32,7 +32,7 @@ def generate_with_retry(model, prompt):
 
 def ai_story_generator(persona, story_setting, character_input, 
                        plot_elements, writing_style, story_tone, narrative_pov,
-                       audience_age_group, content_rating, ending_preference, api_key=None, page_length=3):
+                       audience_age_group, content_rating, ending_preference, api_key=None, page_length=3, output_language="English"):
     """
     Write a story using prompt chaining and iterative generation.
 
@@ -54,33 +54,34 @@ def ai_story_generator(persona, story_setting, character_input,
         persona = f"""{persona}
             Write a story with the following details:
 
-		**The stroy Setting is:**
-		{story_setting}
-		
-		**The Characters of the story are:**
-		{character_input}
-		
-		**Plot Elements of the story:**
-		{plot_elements}
-		
-		**Story Writing Style:**
-		{writing_style}
-		
-		**The story Tone is:**
-		{story_tone}
-		
-		**Write story from the Point of View of:**
-		{narrative_pov}
-		
-		**Target Audience of the story:**
-		{audience_age_group}, **Content Rating:** {content_rating}
-		
-		**Story Ending:**
-		{ending_preference}
-		
-		Make sure the story is engaging and tailored to the specified audience and content rating. 
+        **The stroy Setting is:**
+        {story_setting}
+        
+        **The Characters of the story are:**
+        {character_input}
+        
+        **Plot Elements of the story:**
+        {plot_elements}
+        
+        **Story Writing Style:**
+        {writing_style}
+        
+        **The story Tone is:**
+        {story_tone}
+        
+        **Write story from the Point of View of:**
+        {narrative_pov}
+        
+        **Target Audience of the story:**
+        {audience_age_group}, **Content Rating:** {content_rating}
+        
+        **Story Ending:**
+        {ending_preference}
+        
+        Make sure the story is engaging and tailored to the specified audience and content rating. 
         Ensure the ending aligns with the preference indicated.
-
+        
+        IMPORTANT: Write the story in {output_language} language.
         """
         # Define persona and writing guidelines
         # Calculate target word count (1 page ≈ 300 words)
