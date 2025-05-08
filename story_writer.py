@@ -2,6 +2,10 @@ import time
 import os
 import json
 import streamlit as st
+import sys
+
+# Prevent __pycache__ and .pyc files from being created
+sys.dont_write_bytecode = True
 
 from ai_story_writer import ai_story_generator
 
