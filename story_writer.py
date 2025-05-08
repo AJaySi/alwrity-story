@@ -2,6 +2,10 @@ import time
 import os
 import json
 import streamlit as st
+import sys
+
+# Prevent __pycache__ and .pyc files from being created
+sys.dont_write_bytecode = True
 
 from ai_story_writer import ai_story_generator
 
@@ -24,22 +28,24 @@ def set_page_config():
     )
 
 def custom_css():
-    st.markdown("""
+    st.markdown(f"""
         <style>
-        html, body, [class*="css"]  {
+        html, body, [class*="css"]  {{
             font-size: 16px;
-        }
-        @media (max-width: 600px) {
-            html, body, [class*="css"]  {
+            background: #fff !important;
+            color: #111 !important;
+        }}
+        @media (max-width: 600px) {{
+            html, body, [class*="css"]  {{
                 font-size: 14px !important;
-            }
-            .stButton > button, .stTextInput > div > input {
-                font-size: 15px !important;
-            }
-        }
-        .streamlit-expanderHeader {color: #fff !important; background: #111 !important; border-radius: 8px;}
-        .streamlit-expanderContent {background: #111 !important;}
-        div.stButton > button:first-child {
+            }}
+            .stButton > button, .stTextInput > div > input {{
+                font-size: 13px !important;
+            }}
+        }}
+        .streamlit-expanderHeader {{color: #fff !important; background: #111 !important; border-radius: 8px;}}
+        .streamlit-expanderContent {{background: #111 !important;}}
+        div.stButton > button:first-child {{
             background: #1565C0 !important;
             color: white !important;
             border: none;
@@ -54,9 +60,9 @@ def custom_css():
             transition: background-color 0.3s ease;
             box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
             font-weight: bold;
-        }
-        .stAlert, .stError, .stWarning { color: #fff !important; background: #b71c1c !important; }
-        .footer {text-align:center; margin-top:2rem; color:#1976D2; font-size:15px;}
+        }}
+        .stAlert, .stError, .stWarning {{ color: #fff !important; background: #b71c1c !important; }}
+        .footer {{text-align:center; margin-top:2rem; color:#1976D2; font-size:15px;}}
         </style>
     """, unsafe_allow_html=True)
 
@@ -216,17 +222,41 @@ def input_section():
         "Select the number of pages for your story:",
         min_value=1, max_value=100, value=3, help="1 page ≈ 300 words. For very large stories, consider using your own API key."
     )
+    # Restrict default API key to 10 pages
+    api_key = st.session_state.get("user_api_key", None)
+    if not api_key and page_length > 10:
+        st.warning("To generate more than 10 pages, you must provide your own Gemini API key in Advanced Settings.")
     if page_length > 20:
         st.warning("You have selected a very large story. This may use a lot of API quota and take a long time. For best results, use your own Gemini API key in Advanced Settings.")
 
+    # Language selection in main UI
+    st.subheader("🌐 Output Language")
+    language_options = ["English", "Hindi", "Spanish", "French", "German", "Chinese", "Japanese", "Other"]
+    output_language = st.selectbox(
+        "Select Output Language:",
+        language_options,
+        help="Choose the language in which you want your story to be generated."
+    )
+    if output_language == "Other":
+        custom_language = st.text_input(
+            "Enter your desired language:",
+            placeholder="Type your language (e.g., Italian, Russian, Arabic, etc.)",
+            help="Type the language you want if it's not in the list."
+        )
+        if custom_language.strip():
+            output_language = custom_language.strip()
+    st.session_state["output_language"] = output_language
+
     if st.button('AI, Write a Story..'):
         if character_input.strip():
+            if not api_key and page_length > 10:
+                st.error("You must provide your own Gemini API key in Advanced Settings to generate more than 10 pages.")
+                return
             with st.spinner("Generating Story...💥💥"):
-                api_key = st.session_state.get("user_api_key", None)
                 story_content = ai_story_generator(persona_descriptions[selected_persona_name],
                         story_setting, character_input, plot_elements, writing_style,
                         story_tone, narrative_pov, audience_age_group, content_rating,
-                        ending_preference, api_key=api_key, page_length=page_length)
+                        ending_preference, api_key=api_key, page_length=page_length, output_language=output_language)
                 if story_content:
                     st.subheader('**🧕 Your Awesome Story:**')
                     st.markdown(story_content)
